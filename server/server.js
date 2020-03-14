@@ -22,7 +22,7 @@ const conection = require('./config/conexionMongo').conexionMongo;
 // // parse application/json
 // app.use(bodyParser.json())
 
-app.use(require('./routes/usuario'));
+app.use(require('./routes/index'));
 
 
 /**

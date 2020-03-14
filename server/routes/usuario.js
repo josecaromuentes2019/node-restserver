@@ -2,11 +2,12 @@ const express = require('express');
 const app = express();
 const Usuario = require('../models/usuario');
 const bcrypt = require('bcryptjs');
-/**
- * se instala el paquete undescorejs para filtrar un objeto con los valores 
- * que se deseen, esto permite evitar la modificcion de algunas variables
- * usando el metodo pick
- */
+const { verificaToken, verificaAdmin_Rol } = require('../middlewares/middleware')
+    /**
+     * se instala el paquete undescorejs para filtrar un objeto con los valores 
+     * que se deseen, esto permite evitar la modificcion de algunas variables
+     * usando el metodo pick
+     */
 const _ = require('underscore');
 
 /**
@@ -30,7 +31,7 @@ app.use(bodyParser.json())
 /**
  * servicio para mostrar informacion
  */
-app.get('/usuario', (req, res) => {
+app.get('/usuario', verificaToken, (req, res) => {
     /**
      * se usa query para tomar la variable enviada
      * ej: rep.query.nombre_de_variable
@@ -62,7 +63,7 @@ app.get('/usuario', (req, res) => {
             /**
              * count cuenta el numero de elemetos en la bd
              */
-            Usuario.count({ estado: true }, (err, cuantos) => {
+            Usuario.countDocuments({ estado: true }, (err, cuantos) => {
                 res.json({
                     ok: true,
                     usuarios,
@@ -76,7 +77,7 @@ app.get('/usuario', (req, res) => {
 /**
  * servicio para enviar datos
  */
-app.post('/usuario', (req, res) => {
+app.post('/usuario', [verificaToken, verificaAdmin_Rol], (req, res) => {
     let body = req.body;
 
     let usuario = new Usuario({
@@ -103,7 +104,7 @@ app.post('/usuario', (req, res) => {
 /**
  * servicio para ctualizar datos 
  */
-app.put('/usuario/:id', (req, res) => {
+app.put('/usuario/:id', [verificaToken, verificaAdmin_Rol], (req, res) => {
 
     let id = req.params.id;
     let body = _.pick(req.body, ['nombre', 'email', 'img', 'role', 'estado']);
@@ -122,7 +123,7 @@ app.put('/usuario/:id', (req, res) => {
         })
     });
 });
-app.delete('/usuario/:id', (req, res) => {
+app.delete('/usuario/:id', [verificaToken, verificaAdmin_Rol], (req, res) => {
 
     let id = req.params.id;
 
@@ -145,26 +146,54 @@ app.delete('/usuario/:id', (req, res) => {
     //         })
     //     })
 
-    Usuario.findByIdAndUpdate(id, { estado: false }, { new: true }, (err, usuario) => {
+
+    // Usuario.findByIdAndUpdate(id, { estado: false }, { new: true }, (err, usuario) => {
+    //     if (err) {
+    //         return res.status(400).json({
+    //             ok: false,
+    //             err
+    //         });
+    //     }
+
+
+    //     // if (!usuario.estado) {
+    //     //     return res.json({
+    //     //         ok: false,
+    //     //         message: "el Usuario no existe"
+    //     //     })
+    //     // }
+
+    //     res.json({
+    //         ok: true,
+    //         usuario
+    //     })
+    // })
+
+    Usuario.findById(id, (err, documento) => {
         if (err) {
-            return res.status(400).json({
+            return res.status(500).json({
                 ok: false,
                 err
             });
         }
-
-        if (!usuario.estado) {
-            res.json({
-                of: false,
-                message: "el Usuario no existe"
+        if (!documento.estado) {
+            return res.json({
+                ok: true,
+                message: 'El usuario no existe'
             })
         }
 
-        res.json({
-            ok: true,
-            usuario
+        documento.estado = false;
+
+        documento.save((er, docu) => {
+            res.json({
+                usuario: docu
+            })
         })
+
     })
+
+
 
 
 })
